@@ -17,7 +17,7 @@ namespace Client
 {
     public partial class MainForm : Form
     {
-        public string ServiceIP = "139.196.188.134";
+        public string ServiceIP = "192.168.1.107";
         public MainForm()
         {
             InitializeComponent();
@@ -168,43 +168,47 @@ namespace Client
         }
         private void btnConnection_Click(object sender, EventArgs e)
         {
-            asynchronousClient = new AsynchronousSocketClient(AsynchronousData);
-            synchroClient.Connect(ServiceIP, 7777);
+           // asynchronousClient = new AsynchronousSocketClient(AsynchronousData);
+            asynchronousClient = new AsynchronousSocketClient();
+          //  synchroClient.Connect(ServiceIP, 7777);
             asynchronousClient.Connect(ServiceIP, 7777);
 
 
 
 
-            HelloWCF.Connection();
-            HelloAsyWCF.Connection();
+            //HelloWCF.Connection();
+            //HelloAsyWCF.Connection();
             btnStart.Enabled = true;
             btnSendMess.Enabled = true;
         }
 
         private void btnStart_Click(object sender, EventArgs e)
-        {    
-            Thread downFile = new Thread((ThreadStart)delegate()
+        {
+            Thread downFile = new Thread((ThreadStart)delegate ()
                 {
                     asynchronousClient.DownFile(txtServerFileName.Text);
                 });
 
-            Thread th = new Thread((ThreadStart)delegate()
-                {
-                    DownFile("WCF同步" + txtServerFileName.Text, txtServerFileName.Text);
-                });
-            string cmd = "GetFile " + txtServerFileName.Text;
-            byte[] byt = Encoding.ASCII.GetBytes(cmd);
-            synchroClient.SendMess(byt);
+            //Thread th = new Thread((ThreadStart)delegate ()
+            //    {
+            //        DownFile("WCF同步" + txtServerFileName.Text, txtServerFileName.Text);
+            //    });
+            //string cmd = "GetFile " + txtServerFileName.Text;
+            //byte[] byt = Encoding.ASCII.GetBytes(cmd);
+            //synchroClient.SendMess(byt);
 
             downFile.Start();
-            HelloWCF.BeginDownFile(txtServerFileName.Text, null, null);
-            th.Start();
+           // HelloWCF.BeginDownFile(txtServerFileName.Text, null, null);
+            //th.Start();
         }
 
         private void btnSendMess_Click(object sender, EventArgs e)
         {
-            synchroClient.SendMess("消息抓包测试");
-            HelloWCF.SayHello("消息抓包测试");
+            Thread upFile = new Thread((ThreadStart)delegate ()
+            {
+                asynchronousClient.SynchroSendFile(txtServerFileName.Text);
+            });
+            upFile.Start();
         }
 
         public void AsynchronousData(long downSize, int offset)

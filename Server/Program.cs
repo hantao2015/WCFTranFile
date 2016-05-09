@@ -24,10 +24,10 @@ namespace Server
             string httpurl = "http://" + IP + ":8888/HelloWCFService";
             string tcpUrl = "net.tcp://" + IP + ":9999/HelloWCFService";
 
-            ServiceHost currentHost = GetServiceHost(httpurl, tcpUrl, IP);
-            currentHost.Open();
-            Console.ReadLine();
-            currentHost.Close();
+            //ServiceHost currentHost = GetServiceHost(httpurl, tcpUrl, IP);
+            //currentHost.Open();
+            //Console.ReadLine();
+            //currentHost.Close();
         }
         static ServerListen listen = null;
         private static void Listening(string ip)
@@ -35,6 +35,7 @@ namespace Server
             listen = new ServerListen();
 
             listen.Start(ip, 7777);
+            Console.WriteLine("ip:"+ip+"port:7777");
         }
         public static string getIP() //获取IP
         {

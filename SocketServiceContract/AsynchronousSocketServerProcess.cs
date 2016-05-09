@@ -11,6 +11,8 @@ namespace SocketServiceContract
     public class AsynchronousSocketServerProcess
     {
         Socket client = null;
+       
+
         public AsynchronousSocketServerProcess(Socket client)
         {
             this.client = client;
@@ -51,9 +53,61 @@ namespace SocketServiceContract
                 string FileName = Mess.Replace("SynchroGetFile ", "").Trim().Trim((char)0);
                 SynchroSendFile(FileName);
             }
+            if (Mess.StartsWith("SynchroUpFile ", StringComparison.InvariantCultureIgnoreCase))
+            {
+                string FileName = Mess.Replace("SynchroUpFile ", "").Trim().Trim((char)0);
+                SynchroRecieveFile(FileName);
+            }
         }
+
+        private IAsyncResult re()
+        {
+            return null;
+        }
+        private void SynchroRecieveFile(string fileName)
+        {
+
+         
+
+            byte[] byt = new byte[20400];
+            int reviceLen = client.Receive(byt);
+            SocketError flags;
+            while (reviceLen > 0)
+            {
+                try
+                {
+                    SocketFileInfo fileInfo = SocketFileInfo.DeSerialize(byt);
+                    using (FileStream fs = new FileStream(fileInfo.FileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                    {
+                        fs.Position = fileInfo.CurrentOffset;
+                        fs.Write(fileInfo.CurrentByte, 0, fileInfo.CurrentLen);
+                        fs.Flush();
+                        fs.Close();
+                        fs.Dispose();
+                    }
+                    long downSize = fileInfo.CurrentOffset + fileInfo.CurrentLen;
+                    int offset = (int)(downSize * 100 / fileInfo.FileLength);
+                    SendComand(client,"Success!");
+
+
+                    if (downSize == fileInfo.FileLength)
+                    {
+                        break;
+                    }
+                }
+                catch
+                {
+                    SendComand(client,"Error!");
+
+                }
+                reviceLen = client.Receive(byt, 0, byt.Length, SocketFlags.None, out flags);
+            }
+        
+        }
+
         void SynchroSendFile(string FileName)
         {
+            
             FileStream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read);
 
             SocketFileInfo socketSendFile = new SocketFileInfo(client, fs, FileName);
@@ -86,6 +140,11 @@ namespace SocketServiceContract
         {
             Client.Close();
             Client = null;
+        }
+        public void SendComand(Socket ClientSocket, string Comand)
+        {
+            byte[] byt = Encoding.ASCII.GetBytes(Comand);
+            ClientSocket.Send(byt);
         }
     }
 }

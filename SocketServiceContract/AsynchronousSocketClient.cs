@@ -15,6 +15,10 @@ namespace SocketServiceContract
         {
             this.AsynchronousData = AsynchronousData;
         }
+        public AsynchronousSocketClient()
+        {
+            this.AsynchronousData = null;
+        }
         private Socket ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         AsynchronousDownFilePos AsynchronousData = null;
         public void Stop()
@@ -48,7 +52,7 @@ namespace SocketServiceContract
                 try
                 {
                     SocketFileInfo fileInfo = SocketFileInfo.DeSerialize(byt);
-                    using (FileStream fs = new FileStream("Synchro" + fileInfo.FileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                    using (FileStream fs = new FileStream( fileInfo.FileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
                         fs.Position = fileInfo.CurrentOffset;
                         fs.Write(fileInfo.CurrentByte, 0, fileInfo.CurrentLen);
@@ -58,7 +62,9 @@ namespace SocketServiceContract
                     }
                     long downSize = fileInfo.CurrentOffset + fileInfo.CurrentLen;
                     int offset = (int)(downSize * 100 / fileInfo.FileLength);
-                    AsynchronousData.Invoke(downSize, offset);
+                    if (AsynchronousData!=null)
+                    { AsynchronousData.Invoke(downSize, offset); }
+                   
                     SendComand("Success!");
                     if (downSize == fileInfo.FileLength)
                     {
@@ -76,6 +82,39 @@ namespace SocketServiceContract
         {
             byte[] byt = Encoding.ASCII.GetBytes(Comand);
             ClientSocket.Send(byt);
+        }
+
+
+        public void SynchroSendFile(string FileName)
+        {
+            SendComand("SynchroUpFile " + FileName);
+            FileStream fs = new FileStream(FileName, FileMode.Open, FileAccess.Read);
+
+            SocketFileInfo socketSendFile = new SocketFileInfo(ClientSocket, fs, FileName);
+            socketSendFile.FileLength = fs.Length;
+            int currentLen = fs.Read(socketSendFile.CurrentByte, 0, socketSendFile.MaxLength);
+            byte[] MessByte = new byte[1024];
+
+            while (currentLen > 0)
+            {
+                socketSendFile.CurrentLen = currentLen;
+                socketSendFile.CurrentOffset = socketSendFile.FileStream.Position - currentLen;
+                byte[] Buff = SocketFileInfo.GetSendByte(socketSendFile);
+                while (true)
+                {
+                    ClientSocket.Send(Buff, 0, Buff.Length, SocketFlags.None);
+                    ClientSocket.Receive(MessByte, SocketFlags.None);
+                    string Mess = Encoding.ASCII.GetString(MessByte).Trim().Trim((char)'\0');
+                    if (Mess.Equals("Success!", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        break;
+                    }
+                }
+                currentLen = fs.Read(socketSendFile.CurrentByte, 0, socketSendFile.MaxLength);
+            }
+            fs.Close();
+            fs.Dispose();
+            ClientSocket.Close();
         }
     }
 }
